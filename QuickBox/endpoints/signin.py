@@ -54,27 +54,21 @@ def getUserPassword(password: str):
         conn.close()
 
 
-@router.websocket("/ws")  # Adjust the WebSocket endpoint path
+@router.websocket("/ws/signin")  # Adjust the WebSocket endpoint path
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
             message = await websocket.receive_text()
-            print(message)
             data = json.loads(message)
-            data_type = data.get('type')
-            data_content = data.get('content')
-            if data_type == 'signInEmail':
-                message = getUserEmail(data_content)
-                if message:
-                    await websocket.send_text(json.dumps({'type': data_type, 'content': 'true'}))
-                else:
-                    await websocket.send_text(json.dumps({'type': data_type, 'content': 'false'}))
-            elif data_type == 'signInPassword':
-                message = getUserPassword(data_content)
-                if message:
-                    await websocket.send_text(json.dumps({'type': data_type, 'data': 'true'}))
-                else:
-                    await websocket.send_text(json.dumps({'type': data_type, 'data': 'false'}))
+            email_data = data.get('signInEmail')
+            pass_data = data.get('signInPassword')
+            result_email = getUserEmail(email_data)
+            result_pass = getUserPassword(pass_data)
+            if result_email is True and result_pass is True:
+                await websocket.send_text("true")
+            else:
+                await websocket.send_text("false")
+
     except ConnectionClosedError:
         await websocket.close()
