@@ -1,8 +1,9 @@
 import json
 
 import psycopg2
-from fastapi import APIRouter, WebSocket
-from websockets.exceptions import ConnectionClosedError
+from fastapi import APIRouter, WebSocket, HTTPException, Request
+import httpx
+from starlette.websockets import WebSocketDisconnect
 from QuickBox.config import settings
 
 router = APIRouter()
@@ -54,7 +55,7 @@ def getUserPassword(password: str):
         conn.close()
 
 
-@router.websocket("/ws/signin")  # Adjust the WebSocket endpoint path
+@router.websocket("/ws/signin")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
@@ -63,12 +64,24 @@ async def websocket_endpoint(websocket: WebSocket):
             data = json.loads(message)
             email_data = data.get('signInEmail')
             pass_data = data.get('signInPassword')
-            result_email = getUserEmail(email_data)
-            result_pass = getUserPassword(pass_data)
-            if result_email is True and result_pass is True:
-                await websocket.send_text("true")
-            else:
-                await websocket.send_text("false")
 
-    except ConnectionClosedError:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get("http://192.168.1.33:8000/signin",
+                                            params={"email": email_data, "password": pass_data})
+
+            await websocket.send_text(str(response.json()))
+
+    except WebSocketDisconnect:
         await websocket.close()
+
+
+@router.get("/signin")
+async def signin(email: str, password: str):
+    # Perform user authentication logic here
+    result_email = getUserEmail(email)
+    result_pass = getUserPassword(password)
+    if result_email and result_pass:
+        return {"result": "True"}
+    else:
+        return {"result": "False"}
+
