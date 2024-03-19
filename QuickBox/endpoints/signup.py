@@ -4,12 +4,14 @@ import httpx
 import psycopg2
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect
+
+from QuickBox import config
 from QuickBox.config import settings
 
 router = APIRouter()
 
 
-def checkUser(name: str, email: str, password: str, city: str, street: str, street_number: int, qr_code: str):
+def checkUser(email: str):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -19,7 +21,6 @@ def checkUser(name: str, email: str, password: str, city: str, street: str, stre
     )
     cursor = conn.cursor()
     try:
-        #find if there is a user with the same credentials
         cursor.execute(f"""SELECT name, email, password, city, street, street_number 
         FROM accounts 
         WHERE email = '{email}';""")
@@ -60,32 +61,28 @@ def createUser(name: str, email: str, password: str, city: str, street: str, str
 @router.websocket("/ws/signup")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    try:
-        while True:
-            message = await websocket.receive_text()
-            data = json.loads(message)
-            name_data = data.get('name')
-            email_data = data.get('email')
-            pass_data = data.get('password')
-            city_data = data.get('city')
-            street_data = data.get('street')
-            street_number_data = data.get('street_number')
-            qr_code_data = data.get('qr_code')
+    while True:
+        message = await websocket.receive_text()
+        data = json.loads(message)
+        name_data = data.get('name')
+        email_data = data.get('email')
+        pass_data = data.get('password')
+        city_data = data.get('city')
+        street_data = data.get('street')
+        street_number_data = data.get('street_number')
+        qr_code_data = data.get('qr_code')
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post("http://192.168.1.33:8000/signup",
-                                             params={"name": name_data, "email": email_data, "password": pass_data,
-                                                   "city": city_data, "street": street_data, "street_number": street_number_data, "qr_code": qr_code_data})
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(f"http://{config.ip_address}:8000/signup",
+                                         params={"name": name_data, "email": email_data, "password": pass_data,
+                                               "city": city_data, "street": street_data, "street_number": street_number_data, "qr_code": qr_code_data})
 
-            await websocket.send_text(str(response.json()))
-
-    except WebSocketDisconnect:
-        await websocket.close()
+        await websocket.send_text(str(response.json()))
 
 
 @router.post("/signup")
 async def signup(name: str, email: str, password: str, city: str, street: str, street_number: int, qr_code: str):
-    if checkUser(name, email, password, city, street, street_number, qr_code):
+    if checkUser(name):
         if createUser(name, email, password, city, street, street_number, qr_code):
             return {"result": "ok"}
     else:

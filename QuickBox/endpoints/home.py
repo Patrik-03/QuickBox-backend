@@ -3,7 +3,8 @@ import json
 import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException, Request
 import httpx
-from starlette.websockets import WebSocketDisconnect
+
+from QuickBox import config
 from QuickBox.config import settings
 
 router = APIRouter()
@@ -19,12 +20,12 @@ def getUser(email: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT email FROM accounts WHERE email = '{email}';""")
+        cursor.execute(f"""SELECT name, qr_code FROM accounts WHERE email = '{email}';""")
         record = cursor.fetchone()
         if record is None:
-            return False
+            return None
         else:
-            return True
+            return {'name': record[0], 'qr_code': record[1]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:
@@ -35,29 +36,22 @@ def getUser(email: str):
 @router.websocket("/ws/home")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    try:
-        while True:
-            message = await websocket.receive_text()
-            data = json.loads(message)
-            email_data = data.get('signInEmail')
-            pass_data = data.get('signInPassword')
+    while True:
+        message = await websocket.receive_text()
+        data = json.loads(message)
+        email_data = data.get('email')
 
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get("http://192.168.1.33:8000/home",
-                                            params={"email": email_data, "password": pass_data})
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"http://{config.ip_address}:8000/home",
+                                        params={"email": email_data})
 
-            await websocket.send_text(str(response.json()))
-
-    except WebSocketDisconnect:
-        await websocket.close()
+        await websocket.send_text(str(response.json()))
 
 
 @router.get("/home")
-async def signin(email: str, password: str):
+async def signin(email: str):
     # Perform user authentication logic here
-    result_email = getUser(email)
-    if result_email:
-        return {"result": "True"}
-    else:
-        return {"result": "False"}
+    result = getUser(email)
+    if result:
+        return result
 

@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
 
+ip_address = "10.15.67.112"
+
 
 class Settings(BaseSettings):
     class Config:
