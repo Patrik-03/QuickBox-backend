@@ -20,12 +20,12 @@ def getUser(email: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT name, qr_code FROM accounts WHERE email = '{email}';""")
+        cursor.execute(f"""SELECT name FROM accounts WHERE email = '{email}';""")
         record = cursor.fetchone()
         if record is None:
             return None
         else:
-            return {'name': record[0], 'qr_code': record[1]}
+            return {'name': record[0]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:

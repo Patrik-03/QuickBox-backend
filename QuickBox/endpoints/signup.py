@@ -36,7 +36,7 @@ def checkUser(email: str):
         conn.close()
 
 
-def createUser(name: str, email: str, password: str, city: str, street: str, street_number: int, qr_code: str):
+def createUser(name: str, email: str, password: str, city: str, street: str, street_number: int):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -46,8 +46,8 @@ def createUser(name: str, email: str, password: str, city: str, street: str, str
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""INSERT INTO quickbox.public.accounts (name, email, password, city, street, street_number, qr_code) 
-                        VALUES ('{name}', '{email}', '{password}', '{city}', '{street}', '{street_number}', '{qr_code}');""")
+        cursor.execute(f"""INSERT INTO quickbox.public.accounts (name, email, password, city, street, street_number) 
+                        VALUES ('{name}', '{email}', '{password}', '{city}', '{street}', '{street_number}');""")
         conn.commit()  # Commit the transaction
         cursor.close()
         conn.close()
@@ -70,20 +70,19 @@ async def websocket_endpoint(websocket: WebSocket):
         city_data = data.get('city')
         street_data = data.get('street')
         street_number_data = data.get('street_number')
-        qr_code_data = data.get('qr_code')
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(f"http://{config.ip_address}:8000/signup",
                                          params={"name": name_data, "email": email_data, "password": pass_data,
-                                               "city": city_data, "street": street_data, "street_number": street_number_data, "qr_code": qr_code_data})
+                                               "city": city_data, "street": street_data, "street_number": street_number_data})
 
         await websocket.send_text(str(response.json()))
 
 
 @router.post("/signup")
-async def signup(name: str, email: str, password: str, city: str, street: str, street_number: int, qr_code: str):
+async def signup(name: str, email: str, password: str, city: str, street: str, street_number: int):
     if checkUser(name):
-        if createUser(name, email, password, city, street, street_number, qr_code):
+        if createUser(name, email, password, city, street, street_number):
             return {"result": "ok"}
     else:
         return {"result": "not ok"}

@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 
-ip_address = "147.175.161.250"
+ip_address = "192.168.1.33"
 
 
 class Settings(BaseSettings):
