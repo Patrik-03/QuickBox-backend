@@ -4,7 +4,6 @@ import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException, Request
 import httpx
 
-from QuickBox import config
 from QuickBox.config import settings
 
 router = APIRouter()
@@ -60,7 +59,7 @@ async def websocket_endpoint(websocket: WebSocket):
         email_data = data.get('email')
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://{config.ip_address}:8000/deliveries",
+            response = await client.get(f"http://{settings.IP}:8000/deliveries",
                                         params={"email": email_data})
 
         await websocket.send_text(str(response.json()))

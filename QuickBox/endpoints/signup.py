@@ -3,9 +3,7 @@ import json
 import httpx
 import psycopg2
 from fastapi import APIRouter, WebSocket
-from starlette.websockets import WebSocketDisconnect
 
-from QuickBox import config
 from QuickBox.config import settings
 
 router = APIRouter()
@@ -72,7 +70,7 @@ async def websocket_endpoint(websocket: WebSocket):
         street_number_data = data.get('street_number')
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(f"http://{config.ip_address}:8000/signup",
+            response = await client.post(f"http://{settings.IP}:8000/signup",
                                          params={"name": name_data, "email": email_data, "password": pass_data,
                                                "city": city_data, "street": street_data, "street_number": street_number_data})
 
