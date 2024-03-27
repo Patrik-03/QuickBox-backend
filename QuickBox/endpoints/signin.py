@@ -9,7 +9,7 @@ from QuickBox.config import settings
 router = APIRouter()
 
 
-def getUserEmail(email: str):
+def getUserSignIn(email: str, password: str):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -19,35 +19,9 @@ def getUserEmail(email: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT email FROM accounts WHERE email = '{email}';""")
+        cursor.execute(f"""SELECT id, email, password FROM accounts WHERE email = '{email}' and password = '{password}';""")
         record = cursor.fetchone()
-        if record is None:
-            return False
-        else:
-            return True
-    except (Exception, psycopg2.Error) as error:
-        return {'error': str(error)}
-    finally:
-        cursor.close()
-        conn.close()
-
-
-def getUserPassword(password: str):
-    conn = psycopg2.connect(
-        host=settings.DATABASE_HOST,
-        port=settings.DATABASE_PORT,
-        database=settings.DATABASE_NAME,
-        user=settings.DATABASE_USER,
-        password=settings.DATABASE_PASSWORD
-    )
-    cursor = conn.cursor()
-    try:
-        cursor.execute(f"""SELECT password FROM accounts WHERE password = '{password}';""")
-        record = cursor.fetchone()
-        if record is None:
-            return False
-        else:
-            return True
+        return {'id': record[0], 'email': record[1], 'password': record[2]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:
@@ -75,11 +49,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @router.get("/signin")
 async def signin(email: str, password: str):
-    # Perform user authentication logic here
-    result_email = getUserEmail(email)
-    result_pass = getUserPassword(password)
-    if result_email and result_pass:
-        return {"result": "True"}
-    else:
-        return {"result": "False"}
+    results = getUserSignIn(email, password)
+
+    return results
 
