@@ -46,14 +46,34 @@ def createUser(name: str, email: str, password: str, city: str, street: str, str
     try:
         cursor.execute(f"""INSERT INTO quickbox.public.accounts (name, email, password, city, street, street_number) 
                         VALUES ('{name}', '{email}', '{password}', '{city}', '{street}', '{street_number}');""")
-        conn.commit()  # Commit the transaction
+        conn.commit()
         cursor.close()
         conn.close()
-        return True
     except (Exception, psycopg2.Error) as error:
         # Log the error for debugging purposes
         print(f"Error occurred while inserting user: {error}")
-        return False
+        return {'error': str(error)}
+
+    conn = psycopg2.connect(
+        host=settings.DATABASE_HOST,
+        port=settings.DATABASE_PORT,
+        database=settings.DATABASE_NAME,
+        user=settings.DATABASE_USER,
+        password=settings.DATABASE_PASSWORD
+    )
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"""SELECT id, name, email, password, city, street, street_number 
+        FROM accounts 
+        WHERE email = '{email}';""")
+        record = cursor.fetchone()
+        return {'id': record[0], 'name': record[1], 'email': record[2], 'password': record[3], 'city': record[4],
+                'street': record[5], 'street_number': record[6]}
+    except (Exception, psycopg2.Error) as error:
+        return {'error': str(error)}
+    finally:
+        cursor.close()
+        conn.close()
 
 
 @router.websocket("/ws/signup")
@@ -72,7 +92,8 @@ async def websocket_endpoint(websocket: WebSocket):
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(f"http://{settings.IP}:8000/signup",
                                          params={"name": name_data, "email": email_data, "password": pass_data,
-                                               "city": city_data, "street": street_data, "street_number": street_number_data})
+                                                 "city": city_data, "street": street_data,
+                                                 "street_number": street_number_data})
 
         await websocket.send_text(str(response.json()))
 
@@ -80,7 +101,6 @@ async def websocket_endpoint(websocket: WebSocket):
 @router.post("/signup")
 async def signup(name: str, email: str, password: str, city: str, street: str, street_number: int):
     if checkUser(name):
-        if createUser(name, email, password, city, street, street_number):
-            return {"result": "ok"}
+        return createUser(name, email, password, city, street, street_number)
     else:
-        return {"result": "not ok"}
+        return False

@@ -19,9 +19,12 @@ def getUserSignIn(email: str, password: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT id, email, password FROM accounts WHERE email = '{email}' and password = '{password}';""")
+        cursor.execute(f"""SELECT id, email, password FROM accounts WHERE email = '{email}' and  password = '{password}';""")
         record = cursor.fetchone()
-        return {'id': record[0], 'email': record[1], 'password': record[2]}
+        if record is None:
+            return {'id': '', 'email': '', 'password': ''}
+        else:
+            return {'id': record[0], 'email': record[1], 'password': record[2]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:

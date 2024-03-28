@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException, Request
@@ -9,7 +10,7 @@ from QuickBox.config import settings
 router = APIRouter()
 
 
-def getDeliveries(email: str):
+def getDeliveries(id: int, del_id: Optional[int] = None):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -19,30 +20,45 @@ def getDeliveries(email: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""
-        select * from deliveries
-        join accounts a on deliveries.user_id = a.id
-        where a.email = '{email}';
-        """)
-        records = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        if records is None:
-            return None
-        else:
-            items = []
-            for record in records:
-                items.append({
+        if del_id is not None:
+            cursor.execute(f"""
+            select * from deliveries
+            where user_id = {id} and id = {del_id};
+            """)
+            record = cursor.fetchone()
+            if record is None:
+                return None
+            else:
+                return {
                     'from': record[2],
                     'sent_time': record[3],
                     'delivery_time': record[4],
                     'delivery_type': record[5],
                     'status': record[6],
                     'notes': record[7],
-                })
-            return {
-                'items': items
-            }
+                }
+        else:
+            cursor.execute(f"""
+            select * from deliveries
+            where user_id = {id};
+            """)
+            records = cursor.fetchall()
+            if records is None:
+                return None
+            else:
+                items = []
+                for record in records:
+                    items.append({
+                        'from': record[2],
+                        'sent_time': record[3],
+                        'delivery_time': record[4],
+                        'delivery_type': record[5],
+                        'status': record[6],
+                        'notes': record[7],
+                    })
+                return {
+                    'items': items
+                }
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:
@@ -56,19 +72,18 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         message = await websocket.receive_text()
         data = json.loads(message)
-        email_data = data.get('email')
+        id_data = data.get('id')
+        del_id = data.get('del_id')
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://{settings.IP}:8000/deliveries",
-                                        params={"email": email_data})
+            response = await client.get(f"http://{settings.IP}:8000/deliveries/{id_data}",
+                                        params={"id": id_data, "del_id": del_id})
 
         await websocket.send_text(str(response.json()))
 
 
-@router.get("/deliveries")
-async def signin(email: str):
-    # Perform user authentication logic here
-    result = getDeliveries(email)
+@router.get("/deliveries/{id}")
+async def deliveries(id : int, del_id: Optional[int] = None):
+    result = getDeliveries(id, del_id)
     if result:
         return result
-

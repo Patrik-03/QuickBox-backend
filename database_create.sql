@@ -10,7 +10,7 @@ CREATE TABLE accounts (
 CREATE TABLE deliveries (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES accounts(id),
-    "from" VARCHAR(100),
+    from_id INTEGER REFERENCES accounts(id),
     sent_time TIMESTAMP,
     delivery_time TIMESTAMP,
     delivery_type VARCHAR(50),
@@ -20,7 +20,7 @@ CREATE TABLE deliveries (
 CREATE TABLE history (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES accounts(id),
-    "from" VARCHAR(100),
+    from_id INTEGER REFERENCES accounts(id),
     sent_time TIMESTAMP,
     delivery_time TIMESTAMP,
     delivery_type VARCHAR(50),

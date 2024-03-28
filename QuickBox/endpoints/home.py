@@ -9,7 +9,7 @@ from QuickBox.config import settings
 router = APIRouter()
 
 
-def getUser(email: str):
+def getUser(id: int):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -19,12 +19,12 @@ def getUser(email: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT name FROM accounts WHERE email = '{email}';""")
+        cursor.execute(f"""SELECT id, name FROM accounts WHERE id = '{id}';""")
         record = cursor.fetchone()
         if record is None:
             return None
         else:
-            return {'name': record[0]}
+            return {'id': record[0], 'name': record[1]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:
@@ -38,19 +38,23 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         message = await websocket.receive_text()
         data = json.loads(message)
-        email_data = data.get('email')
+        id_data = data.get('id')
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"http://{settings.IP}:8000/home",
-                                        params={"email": email_data})
+                                        params={"id": id_data})
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response2 = await client.get(f"http://{settings.IP}:8000/deliveries",
+                                        params={"id": id_data})
 
         await websocket.send_text(str(response.json()))
+        await websocket.send_text(str(response2.json()))
 
 
 @router.get("/home")
-async def signin(email: str):
-    # Perform user authentication logic here
-    result = getUser(email)
+async def home(id: int):
+    result = getUser(id)
     if result:
         return result
 
