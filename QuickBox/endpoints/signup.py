@@ -3,6 +3,7 @@ import json
 import httpx
 import psycopg2
 from fastapi import APIRouter, WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
 
@@ -80,22 +81,25 @@ def createUser(name: str, email: str, password: str, city: str, street: str, str
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
-        message = await websocket.receive_text()
-        data = json.loads(message)
-        name_data = data.get('name')
-        email_data = data.get('email')
-        pass_data = data.get('password')
-        city_data = data.get('city')
-        street_data = data.get('street')
-        street_number_data = data.get('street_number')
+        try:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+            name_data = data.get('name')
+            email_data = data.get('email')
+            pass_data = data.get('password')
+            city_data = data.get('city')
+            street_data = data.get('street')
+            street_number_data = data.get('street_number')
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(f"http://{settings.IP}:8000/signup",
-                                         params={"name": name_data, "email": email_data, "password": pass_data,
-                                                 "city": city_data, "street": street_data,
-                                                 "street_number": street_number_data})
+            async with httpx.AsyncClient() as client:
+                response = await client.post(f"http://{settings.IP}:8000/signup",
+                                             params={"name": name_data, "email": email_data, "password": pass_data,
+                                                     "city": city_data, "street": street_data,
+                                                     "street_number": street_number_data})
 
-        await websocket.send_text(str(response.json()))
+            await websocket.send_text(str(response.json()))
+        except WebSocketDisconnect:
+            break
 
 
 @router.post("/signup")

@@ -3,6 +3,7 @@ import json
 import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException, Request
 import httpx
+from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
 
@@ -36,18 +37,21 @@ def getUserSignIn(email: str, password: str):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
-        message = await websocket.receive_text()
-        data = json.loads(message)
-        email_data = data.get('signInEmail')
-        pass_data = data.get('signInPassword')
-        if email_data == "close" and pass_data == "close":
-            await websocket.close()
-        else:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(f"http://{settings.IP}:8000/signin",
-                                            params={"email": email_data, "password": pass_data})
+        try:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+            email_data = data.get('signInEmail')
+            pass_data = data.get('signInPassword')
+            if email_data == "close" and pass_data == "close":
+                await websocket.close()
+            else:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(f"http://{settings.IP}:8000/signin",
+                                                params={"email": email_data, "password": pass_data})
 
-            await websocket.send_text(str(response.json()))
+                await websocket.send_text(str(response.json()))
+        except WebSocketDisconnect:
+            break
 
 
 @router.get("/signin")

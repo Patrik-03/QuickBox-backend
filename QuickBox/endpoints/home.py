@@ -3,6 +3,7 @@ import json
 import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException, Request
 import httpx
+from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
 
@@ -36,24 +37,29 @@ def getUser(id: int):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
-        message = await websocket.receive_text()
-        data = json.loads(message)
-        id_data = data.get('id')
+        try:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+            id_data = data.get('id')
+            del_id = data.get('del_id')
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://{settings.IP}:8000/home",
-                                        params={"id": id_data})
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"http://{settings.IP}:8000/home",
+                                            params={"id": id_data})
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response2 = await client.get(f"http://{settings.IP}:8000/deliveries",
-                                        params={"id": id_data})
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response2 = await client.get(f"http://{settings.IP}:8000/deliveries/{id_data}?del_id={del_id}",
+                                            params={"id": id_data, "del_id": del_id})
 
-        await websocket.send_text(str(response.json()))
-        await websocket.send_text(str(response2.json()))
+            await websocket.send_text(str(response.json()))
+            await websocket.send_text(str(response2.json()))
+        except WebSocketDisconnect:
+            break
 
 
 @router.get("/home")
-async def home(id: int):
+async def signin(id: int):
+    # Perform user authentication logic here
     result = getUser(id)
     if result:
         return result
