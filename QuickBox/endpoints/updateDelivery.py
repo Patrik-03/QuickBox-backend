@@ -20,7 +20,7 @@ async def update_delivery(delivery_id: int):
         password=settings.DATABASE_PASSWORD
     )
     cursor = conn.cursor()
-    statuses = ['sent', 'received by courier', 'on the go', 'nearby', 'delivered']
+    statuses = ['Sent', 'Received by courier', 'On the go', 'Nearby', 'Delivered']
     try:
         cursor.execute(f"SELECT * FROM deliveries WHERE id = {delivery_id};")
         delivery = cursor.fetchone()

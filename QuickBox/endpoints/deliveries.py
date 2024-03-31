@@ -24,19 +24,30 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
         if del_id != 0:
             cursor.execute(f"""
             select * from deliveries
-            where user_id = {id} and id = {del_id};
+            where user_id = {id} and id = {del_id}
             """)
             record = cursor.fetchone()
             if record is None:
-                return None
+                cursor.execute(f"""select * from history
+                where user_id = {id} and id = {del_id};""")
+                record = cursor.fetchone()
+                if record is None:
+                    return None
+                else:
+                    return {
+                        'from': record[2],
+                        'sent_time': record[3],
+                        'delivery_time': record[4],
+                        'status': record[6],
+                        'note': record[7],
+                    }
             else:
                 return {
                     'from': record[2],
                     'sent_time': record[3],
                     'delivery_time': record[4],
-                    'delivery_type': record[5],
                     'status': record[6],
-                    'notes': record[7],
+                    'note': record[7],
                 }
         else:
             cursor.execute(f"""
@@ -51,7 +62,6 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
                 for record in records:
                     items.append({
                         'id': record[0],
-                        'from': record[2],
                         'delivery_time': record[4],
                         'status': record[6],
                     })

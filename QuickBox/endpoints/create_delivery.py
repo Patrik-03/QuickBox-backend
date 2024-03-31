@@ -97,7 +97,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 delivery_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 60 * 60 * 24 * 2))  # 2 days
             elif delivery_type == 'fast':
                 delivery_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 60 * 60 * 24 * 1))  # 1 day
-            status = 'sent'
+            status = 'Sent'
             note = data.get('note')
 
             async with httpx.AsyncClient() as client:

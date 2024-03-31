@@ -3,13 +3,14 @@ import json
 import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException, Request
 import httpx
+from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
 
 router = APIRouter()
 
 
-def getDeliveries(email: str):
+def getDeliveries(id : int):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -21,24 +22,27 @@ def getDeliveries(email: str):
     try:
         cursor.execute(f"""
         select * from history
-        join accounts a on history.user_id = a.id
-        where a.email = '{email}';
+        where user_id = {id};
         """)
         records = cursor.fetchall()
         cursor.close()
         conn.close()
-        if records is None:
-            return None
+        print(records)
+        if not records:
+            items = []
+            items.append({
+                'id': "0",
+                'type': 'history'
+            })
+            return {
+                'items': items
+            }
         else:
             items = []
             for record in records:
                 items.append({
-                    'from': record[2],
-                    'sent_time': record[3],
-                    'delivery_time': record[4],
-                    'delivery_type': record[5],
-                    'status': record[6],
-                    'notes': record[7],
+                    'id': record[0],
+                    'type': 'history',
                 })
             return {
                 'items': items
@@ -54,21 +58,57 @@ def getDeliveries(email: str):
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
-        message = await websocket.receive_text()
-        data = json.loads(message)
-        email_data = data.get('email')
+        try:
+            message = await websocket.receive_text()
+            data = json.loads(message)
+            id_data = data.get('id')
+            type = data.get('type')
+            if type == 'delete':
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.delete(f"http://{settings.IP}:8000/delete_history/{id_data}",
+                                                params={"id": id_data})
+                await websocket.send_text(str(response.json()))
+            else:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(f"http://{settings.IP}:8000/deliveries_history/{id_data}",
+                                                params={"id": id_data})
+                print(response.json())
+                await websocket.send_text(str(response.json()))
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://{settings.IP}:8000/deliveries_history",
-                                        params={"email": email_data})
-
-        await websocket.send_text(str(response.json()))
+        except WebSocketDisconnect:
+            break
 
 
-@router.get("/deliveries_history")
-async def signin(email: str):
-    # Perform user authentication logic here
-    result = getDeliveries(email)
+@router.get("/deliveries_history/{id}")
+async def getDel(id : int):
+    result = getDeliveries(id)
     if result:
         return result
 
+
+@router.delete("/delete_history/{id}")
+async def deleteHis(id : int):
+    result = deleteHistory(id)
+    if result:
+        return result
+
+
+def deleteHistory(id : int):
+    conn = psycopg2.connect(
+        host=settings.DATABASE_HOST,
+        port=settings.DATABASE_PORT,
+        database=settings.DATABASE_NAME,
+        user=settings.DATABASE_USER,
+        password=settings.DATABASE_PASSWORD
+    )
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"DELETE FROM history WHERE user_id = {id};")
+        conn.commit()
+        return {'id': id, 'type': 'delete'}
+    except Exception as e:
+        print(f"Error deleting history with ID {id}: {e}")
+
+    finally:
+        cursor.close()
+        conn.close()
