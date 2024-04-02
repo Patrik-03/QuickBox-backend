@@ -3,9 +3,8 @@ CREATE TABLE accounts (
     name VARCHAR(100),
     email VARCHAR(100) UNIQUE,
     password VARCHAR(100),
-    city VARCHAR(100),
-    street VARCHAR(100),
-    street_number VARCHAR(20)
+    longitude FLOAT,
+    latitude FLOAT
 );
 CREATE TABLE deliveries (
     id SERIAL PRIMARY KEY,

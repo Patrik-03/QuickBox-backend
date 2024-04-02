@@ -20,7 +20,7 @@ def checkUser(email: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT name, email, password, city, street, street_number 
+        cursor.execute(f"""SELECT name, email, password, longitude, latitude
         FROM accounts 
         WHERE email = '{email}';""")
         record = cursor.fetchone()
@@ -35,7 +35,7 @@ def checkUser(email: str):
         conn.close()
 
 
-def createUser(name: str, email: str, password: str, city: str, street: str, street_number: int):
+def createUser(name: str, email: str, password: str, longitude: float, latitude: float):
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -45,8 +45,8 @@ def createUser(name: str, email: str, password: str, city: str, street: str, str
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""INSERT INTO quickbox.public.accounts (name, email, password, city, street, street_number) 
-                        VALUES ('{name}', '{email}', '{password}', '{city}', '{street}', '{street_number}');""")
+        cursor.execute(f"""INSERT INTO quickbox.public.accounts (name, email, password, longitude, latitude) 
+                        VALUES ('{name}', '{email}', '{password}', {longitude}, {latitude});""")
         conn.commit()
         cursor.close()
         conn.close()
@@ -64,12 +64,12 @@ def createUser(name: str, email: str, password: str, city: str, street: str, str
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT id, name, email, password, city, street, street_number 
+        cursor.execute(f"""SELECT id, name, email, password, longitude, latitude
         FROM accounts 
         WHERE email = '{email}';""")
         record = cursor.fetchone()
-        return {'id': record[0], 'name': record[1], 'email': record[2], 'password': record[3], 'city': record[4],
-                'street': record[5], 'street_number': record[6]}
+        return {'id': record[0], 'name': record[1], 'email': record[2], 'password': record[3], 'longitude': record[4],
+                'latitude': record[5]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:
@@ -87,15 +87,13 @@ async def websocket_endpoint(websocket: WebSocket):
             name_data = data.get('name')
             email_data = data.get('email')
             pass_data = data.get('password')
-            city_data = data.get('city')
-            street_data = data.get('street')
-            street_number_data = data.get('street_number')
+            longitude_data = data.get('longitude')
+            latitude_data = data.get('latitude')
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"http://{settings.IP}:8000/signup",
                                              params={"name": name_data, "email": email_data, "password": pass_data,
-                                                     "city": city_data, "street": street_data,
-                                                     "street_number": street_number_data})
+                                                     "longitude": longitude_data, "latitude": latitude_data})
 
             await websocket.send_text(str(response.json()))
         except WebSocketDisconnect:
@@ -103,8 +101,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @router.post("/signup")
-async def signup(name: str, email: str, password: str, city: str, street: str, street_number: int):
+async def signup(name: str, email: str, password: str, longitude: float, latitude: float):
     if checkUser(name):
-        return createUser(name, email, password, city, street, street_number)
+        return createUser(name, email, password, longitude, latitude)
     else:
         return False

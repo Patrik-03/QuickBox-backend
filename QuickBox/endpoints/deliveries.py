@@ -23,8 +23,10 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
     try:
         if del_id != 0:
             cursor.execute(f"""
-            select * from deliveries
-            where user_id = {id} and id = {del_id}
+            select deliveries.id, accounts.name, deliveries.sent_time, deliveries.delivery_time, deliveries.status, deliveries.note
+            from deliveries
+            join accounts on deliveries.from_id = accounts.id
+            where user_id = {id} and deliveries.id = {del_id}
             """)
             record = cursor.fetchone()
             if record is None:
@@ -35,23 +37,27 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
                     return None
                 else:
                     return {
-                        'from': record[2],
-                        'sent_time': record[3],
-                        'delivery_time': record[4],
-                        'status': record[6],
-                        'note': record[7],
+                        'id': record[0],
+                        'from': record[1],
+                        'sent_time': record[2],
+                        'delivery_time': record[3],
+                        'status': record[4],
+                        'note': record[5],
                     }
             else:
                 return {
-                    'from': record[2],
-                    'sent_time': record[3],
-                    'delivery_time': record[4],
-                    'status': record[6],
-                    'note': record[7],
+                    'id': record[0],
+                    'from': record[1],
+                    'sent_time': record[2],
+                    'delivery_time': record[3],
+                    'status': record[4],
+                    'note': record[5],
                 }
         else:
             cursor.execute(f"""
-            select * from deliveries
+            select deliveries.id, accounts.name, deliveries.sent_time, deliveries.delivery_time, deliveries.status, deliveries.note
+            from deliveries
+            join accounts on deliveries.from_id = accounts.id
             where user_id = {id};
             """)
             records = cursor.fetchall()
@@ -62,8 +68,11 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
                 for record in records:
                     items.append({
                         'id': record[0],
-                        'delivery_time': record[4],
-                        'status': record[6],
+                        'from': record[1],
+                        'sent_time': record[2],
+                        'delivery_time': record[3],
+                        'status': record[4],
+                        'note': record[5],
                     })
                 return {
                     'items': items
