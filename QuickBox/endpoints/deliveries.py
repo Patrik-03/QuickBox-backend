@@ -21,7 +21,7 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
     )
     cursor = conn.cursor()
     try:
-        if del_id != 0:
+        if del_id != 0 and del_id != -1:
             cursor.execute(f"""
             select deliveries.id, accounts.name, deliveries.sent_time, deliveries.delivery_time, deliveries.status, deliveries.note
             from deliveries
@@ -52,6 +52,31 @@ def getDeliveries(id: int, del_id: Optional[int] = None):
                     'delivery_time': record[3],
                     'status': record[4],
                     'note': record[5],
+                }
+
+        elif del_id == -1:
+            cursor.execute(f"""
+            select deliveries.id, accounts.name, deliveries.sent_time, deliveries.delivery_time, deliveries.status, deliveries.note
+            from deliveries
+            join accounts on deliveries.from_id = accounts.id
+            where user_id = {id} and deliveries.status = 'Nearby';
+            """)
+            items = []
+            records = cursor.fetchall()
+            if records is None:
+                return items
+            else:
+                for record in records:
+                    items.append({
+                        'id': record[0],
+                        'from': record[1],
+                        'sent_time': record[2],
+                        'delivery_time': record[3],
+                        'status': record[4],
+                        'note': record[5],
+                    })
+                return {
+                    'items': items
                 }
         else:
             cursor.execute(f"""

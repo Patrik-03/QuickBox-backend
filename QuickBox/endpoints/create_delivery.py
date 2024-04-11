@@ -3,7 +3,7 @@ import threading
 import time
 
 import psycopg2
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, HTTPException
 import httpx
 from starlette.websockets import WebSocketDisconnect
 
@@ -26,7 +26,7 @@ def createDeliveries(user_id: int, from_id: int, sent_time: str, delivery_time: 
     cursor.execute(f"SELECT * FROM accounts WHERE id = {user_id};")
     user = cursor.fetchone()
     if user is None:
-        return {'from': '', 'sent_time': '', 'delivery_time': '', 'delivery_type': '', 'status': '', 'note': ''}
+        raise HTTPException(status_code=400, detail="User not found")
     else:
         conn = psycopg2.connect(
             host=settings.DATABASE_HOST,
@@ -107,6 +107,10 @@ async def websocket_endpoint(websocket: WebSocket):
                                                     "status": status, "note": note})
 
             await websocket.send_text(str(response.json()))
+        except HTTPException as e:
+            # Handle incorrect credentials case
+            error_message = {"error": "Incorrect credentials"}
+            await websocket.send_text(json.dumps(error_message))
         except WebSocketDisconnect:
             break
 

@@ -2,7 +2,7 @@ import json
 
 import httpx
 import psycopg2
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, HTTPException
 from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
@@ -26,10 +26,8 @@ def checkUser(email: str):
         record = cursor.fetchone()
         if record is None:
             return True
-        else:
-            return False
     except (Exception, psycopg2.Error) as error:
-        return {'error': str(error)}
+        raise HTTPException(status_code=400, detail="User already exists")
     finally:
         cursor.close()
         conn.close()
@@ -51,9 +49,7 @@ def createUser(name: str, email: str, password: str, longitude: float, latitude:
         cursor.close()
         conn.close()
     except (Exception, psycopg2.Error) as error:
-        # Log the error for debugging purposes
-        print(f"Error occurred while inserting user: {error}")
-        return {'error': str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
 
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
@@ -71,7 +67,7 @@ def createUser(name: str, email: str, password: str, longitude: float, latitude:
         return {'id': record[0], 'name': record[1], 'email': record[2], 'password': record[3], 'longitude': record[4],
                 'latitude': record[5]}
     except (Exception, psycopg2.Error) as error:
-        return {'error': str(error)}
+        raise HTTPException(status_code=400, detail=str(error))
     finally:
         cursor.close()
         conn.close()
@@ -96,6 +92,10 @@ async def websocket_endpoint(websocket: WebSocket):
                                                      "longitude": longitude_data, "latitude": latitude_data})
 
             await websocket.send_text(str(response.json()))
+
+        except HTTPException as e:
+            error_message = {"error": "User already exists"}
+            await websocket.send_text(json.dumps(error_message))
         except WebSocketDisconnect:
             break
 
@@ -105,4 +105,4 @@ async def signup(name: str, email: str, password: str, longitude: float, latitud
     if checkUser(name):
         return createUser(name, email, password, longitude, latitude)
     else:
-        return False
+        raise HTTPException(status_code=400, detail="User already exists")

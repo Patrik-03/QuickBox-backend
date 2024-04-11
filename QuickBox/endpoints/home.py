@@ -1,11 +1,12 @@
 import json
 
 import psycopg2
-from fastapi import APIRouter, WebSocket, HTTPException, Request
+from fastapi import APIRouter, WebSocket
 import httpx
 from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
+from QuickBox.endpoints.websocketmanager import WebSocketManager
 
 router = APIRouter()
 
@@ -39,6 +40,7 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         try:
             message = await websocket.receive_text()
+            WebSocketManager().add_websocket(1, websocket)
             data = json.loads(message)
             id_data = data.get('id')
             del_id = data.get('del_id')

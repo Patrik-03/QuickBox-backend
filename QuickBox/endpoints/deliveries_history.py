@@ -103,12 +103,37 @@ def deleteHistory(id : int):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"DELETE FROM history WHERE user_id = {id};")
-        conn.commit()
-        return {'id': id, 'type': 'delete'}
-    except Exception as e:
-        print(f"Error deleting history with ID {id}: {e}")
+        cursor.execute(f"SELECT * FROM history WHERE user_id = {id};")
+        record = cursor.fetchone()
+        if record is None:
+            raise HTTPException(status_code=400, detail="User not found")
+        else:
+            conn.close()
+            cursor.close()
 
-    finally:
-        cursor.close()
-        conn.close()
+        conn = psycopg2.connect(
+            host=settings.DATABASE_HOST,
+            port=settings.DATABASE_PORT,
+            database=settings.DATABASE_NAME,
+            user=settings.DATABASE_USER,
+            password=settings.DATABASE_PASSWORD
+        )
+        cursor = conn.cursor()
+        try:
+            cursor.execute(f"DELETE FROM history WHERE user_id = {id};")
+            conn.commit()
+            items = [{
+                'id': id,
+                'type': 'delete'
+            }]
+            return {
+                'items': items
+            }
+        except Exception as e:
+            print(f"Error deleting history with ID {id}: {e}")
+
+        finally:
+            cursor.close()
+            conn.close()
+    except (Exception, psycopg2.Error) as error:
+        return {'error': str(error)}

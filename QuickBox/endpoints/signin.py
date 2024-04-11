@@ -1,7 +1,7 @@
 import json
 
 import psycopg2
-from fastapi import APIRouter, WebSocket, HTTPException, Request
+from fastapi import APIRouter, WebSocket, HTTPException
 import httpx
 from starlette.websockets import WebSocketDisconnect
 
@@ -22,12 +22,9 @@ def getUserSignIn(email: str, password: str):
     try:
         cursor.execute(f"""SELECT id, email, password, longitude, latitude, accounts.name FROM accounts WHERE email = '{email}' and  password = '{password}';""")
         record = cursor.fetchone()
-        if record is None:
-            return {'id': '', 'email': '', 'password': ''}
-        else:
-            return {'id': record[0], 'email': record[1], 'password': record[2], 'longitude': record[3], 'latitude': record[4], 'name': record[5]}
-    except (Exception, psycopg2.Error) as error:
-        return {'error': str(error)}
+        return {'id': record[0], 'email': record[1], 'password': record[2], 'longitude': record[3], 'latitude': record[4], 'name': record[5]}
+    except (Exception, psycopg2.Error):
+        raise HTTPException(status_code=400, detail="User not found")
     finally:
         cursor.close()
         conn.close()
@@ -48,8 +45,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 async with httpx.AsyncClient() as client:
                     response = await client.get(f"http://{settings.IP}:8000/signin",
                                                 params={"email": email_data, "password": pass_data})
-
                 await websocket.send_text(str(response.json()))
+        except HTTPException as e:
+            # Handle incorrect credentials case
+            error_message = {"error": "Incorrect credentials"}
+            await websocket.send_text(json.dumps(error_message))
         except WebSocketDisconnect:
             break
 

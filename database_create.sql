@@ -14,7 +14,9 @@ CREATE TABLE deliveries (
     delivery_time TIMESTAMP,
     delivery_type VARCHAR(50),
     status VARCHAR(50),
-    note TEXT
+    note TEXT,
+    latitude FLOAT,
+    longitude FLOAT
 );
 CREATE TABLE history (
     id SERIAL PRIMARY KEY,
