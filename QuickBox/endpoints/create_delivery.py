@@ -28,40 +28,25 @@ def createDeliveries(user_id: int, from_id: int, sent_time: str, delivery_time: 
     if user is None:
         raise HTTPException(status_code=400, detail="User not found")
     else:
-        conn = psycopg2.connect(
-            host=settings.DATABASE_HOST,
-            port=settings.DATABASE_PORT,
-            database=settings.DATABASE_NAME,
-            user=settings.DATABASE_USER,
-            password=settings.DATABASE_PASSWORD
-        )
-        cursor = conn.cursor()
+        cursor2 = conn.cursor()
         try:
-            cursor.execute(f"""
+            cursor2.execute(f"""
             INSERT INTO deliveries (user_id, from_id, sent_time, delivery_time, delivery_type, status, note)
             VALUES ('{user_id}', '{from_id}', '{sent_time}', '{delivery_time}', '{delivery_type}', '{status}', '{note}');
             """)
             conn.commit()
-            cursor.close()
-            conn.close()
+            cursor2.close()
 
         except (Exception, psycopg2.Error) as error:
             return {'error': str(error)}
-
-        conn = psycopg2.connect(
-            host=settings.DATABASE_HOST,
-            port=settings.DATABASE_PORT,
-            database=settings.DATABASE_NAME,
-            user=settings.DATABASE_USER,
-            password=settings.DATABASE_PASSWORD
-        )
-        cursor = conn.cursor()
+        cursor3 = conn.cursor()
         try:
-            cursor.execute(f"""
+            cursor3.execute(f"""
             select * from deliveries
             where user_id = {user_id} and from_id = {from_id} and sent_time = '{sent_time}' and delivery_time = '{delivery_time}' and delivery_type = '{delivery_type}' and status = '{status}';
             """)
-            record = cursor.fetchone()
+            record = cursor3.fetchone()
+            cursor3.close()
             if record is None:
                 return None
             else:

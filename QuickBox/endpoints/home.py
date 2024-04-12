@@ -1,3 +1,4 @@
+import base64
 import json
 
 import psycopg2
@@ -21,12 +22,14 @@ def getUser(id: int):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT id, name FROM accounts WHERE id = '{id}';""")
+        cursor.execute(f"""SELECT id, name, qr_code FROM accounts WHERE id = '{id}';""")
         record = cursor.fetchone()
         if record is None:
             return None
         else:
-            return {'id': record[0], 'name': record[1]}
+            # Convert the BLOB to a Base64 string
+            qr_code_base64 = base64.b64encode(record[2]).decode()
+            return {'id': record[0], 'name': record[1], 'qr_code': qr_code_base64}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:

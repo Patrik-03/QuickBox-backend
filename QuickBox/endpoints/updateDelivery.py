@@ -5,7 +5,7 @@ import time
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 import psycopg2
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from starlette.websockets import WebSocket
 
 from QuickBox.config import settings
@@ -134,7 +134,7 @@ async def update_delivery(delivery_id: int):
 
         if not delivery:
             print(f"No delivery found with ID {delivery_id}")
-            return
+            raise HTTPException(status_code=404, detail="Delivery not found")
 
         current_status = delivery[6]
         next_status = current_status
@@ -174,8 +174,8 @@ async def update_delivery(delivery_id: int):
                                                            "note": delivery[7]})
                 return {'status': 'delivered'}
 
-    except Exception as e:
-        print(f"Error updating delivery with ID {delivery_id}: {e}")
+    except (Exception, psycopg2.Error) as error:
+        raise HTTPException(status_code=400, detail=str(error))
     finally:
         cursor.close()
         conn.close()

@@ -106,7 +106,7 @@ def deleteHistory(id : int):
         cursor.execute(f"SELECT * FROM history WHERE user_id = {id};")
         record = cursor.fetchone()
         if record is None:
-            raise HTTPException(status_code=400, detail="User not found")
+            raise HTTPException(status_code=404, detail="User not found")
         else:
             conn.close()
             cursor.close()

@@ -24,7 +24,7 @@ def getUserSignIn(email: str, password: str):
         record = cursor.fetchone()
         return {'id': record[0], 'email': record[1], 'password': record[2], 'longitude': record[3], 'latitude': record[4], 'name': record[5]}
     except (Exception, psycopg2.Error):
-        raise HTTPException(status_code=400, detail="User not found")
+        raise HTTPException(status_code=400, detail="Incorrect credentials")
     finally:
         cursor.close()
         conn.close()
