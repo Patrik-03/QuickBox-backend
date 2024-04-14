@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import re
 
@@ -49,8 +50,12 @@ def createUser(name: str, email: str, password: str, longitude: float, latitude:
         email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         if not re.match(email_regex, email):
             raise HTTPException(status_code=400, detail="Invalid email")
+
+        # Hash the password
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+
         cursor.execute(f"""INSERT INTO quickbox.public.accounts (name, email, password, longitude, latitude) 
-                        VALUES ('{name}', '{email}', '{password}', {longitude}, {latitude});""")
+                            VALUES ('{name}', '{email}', '{hashed_password}', {longitude}, {latitude});""")
         conn.commit()
         cursor.close()
         cursor2.execute(f"""SELECT id, name, email, password, longitude, latitude

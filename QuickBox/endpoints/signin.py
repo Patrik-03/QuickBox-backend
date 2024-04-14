@@ -1,3 +1,4 @@
+import hashlib
 import json
 
 import psycopg2
@@ -20,8 +21,11 @@ def getUserSignIn(email: str, password: str):
     )
     cursor = conn.cursor()
     try:
-        cursor.execute(f"""SELECT id, email, password, longitude, latitude, accounts.name FROM accounts WHERE email = '{email}' and  password = '{password}';""")
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        cursor.execute(f"""SELECT id, email, password, longitude, latitude, accounts.name FROM accounts WHERE email = '{email}' and password = '{hashed_password}';""")
         record = cursor.fetchone()
+        if record is None or record[2] != hashed_password:
+            raise HTTPException(status_code=400, detail="Incorrect credentials")
         return {'id': record[0], 'email': record[1], 'password': record[2], 'longitude': record[3], 'latitude': record[4], 'name': record[5]}
     except (Exception, psycopg2.Error):
         raise HTTPException(status_code=400, detail="Incorrect credentials")
