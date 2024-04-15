@@ -4,8 +4,10 @@ import json
 import re
 
 import httpx
+import requests
 import psycopg2
 from fastapi import APIRouter, WebSocket, HTTPException
+from httpx import Request
 from starlette.websockets import WebSocketDisconnect
 
 from QuickBox.config import settings
@@ -88,13 +90,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 latitude_data = data.get('latitude')
             else:
                 qr_code_data = data.get('qr_code')
-                qr_code_blob = base64.b64decode(qr_code_data)
 
             async with httpx.AsyncClient() as client:
                 if user_id:
                     # Update existing account
                     response = await client.put(f"http://{settings.IP}:8000/update_qr",
-                                                params={"user_id": user_id, "qr_code": qr_code_blob})
+                                                params={"user_id": user_id, "qr_code": qr_code_data})
 
                 else:
                     # Create new account

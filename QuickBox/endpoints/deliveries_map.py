@@ -58,10 +58,10 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     while True:
         try:
-            WebSocketManager().add_websocket(2, websocket)
             message = await websocket.receive_text()
             data = json.loads(message)
             id_data = data.get('id')
+            WebSocketManager().add_websocket(int(id_data)+2, websocket)
             del_id = data.get('del_id')
 
             async with httpx.AsyncClient(timeout=30.0) as client:

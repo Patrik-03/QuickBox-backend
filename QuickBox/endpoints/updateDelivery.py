@@ -118,7 +118,6 @@ class LocationSimulator(threading.Thread):
 
 @router.put('/updateDelivery/{delivery_id}')
 async def update_delivery(delivery_id: int):
-    simulator = LocationSimulator(delivery_id, WebSocketManager().get_websocket(2))
     conn = psycopg2.connect(
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
@@ -138,12 +137,13 @@ async def update_delivery(delivery_id: int):
 
         current_status = delivery[6]
         next_status = current_status
+        simulator = LocationSimulator(delivery_id, WebSocketManager().get_websocket(int(delivery[1])+2))
         if current_status != statuses[-1]:
             next_status = statuses[statuses.index(current_status) + 1]
         if not simulator.is_alive():
             if next_status != 'Delivered':
                 await WebSocketManager().send_message(
-                    1,
+                    int(delivery[1])+1,
                     str({'type': 'delivery_status_update', 'delivery_id': delivery_id, 'status': next_status})
                 )
             if current_status == 'Nearby':  # if current status is 'Nearby' then start simulations

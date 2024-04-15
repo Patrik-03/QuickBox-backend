@@ -27,9 +27,7 @@ def getUser(id: int):
         if record is None:
             return None
         else:
-            # Convert the BLOB to a Base64 string
-            qr_code_base64 = base64.b64encode(record[2]).decode()
-            return {'id': record[0], 'name': record[1], 'qr_code': qr_code_base64}
+            return {'id': record[0], 'name': record[1], 'qr_code': record[2]}
     except (Exception, psycopg2.Error) as error:
         return {'error': str(error)}
     finally:
@@ -43,9 +41,9 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         try:
             message = await websocket.receive_text()
-            WebSocketManager().add_websocket(1, websocket)
             data = json.loads(message)
             id_data = data.get('id')
+            WebSocketManager().add_websocket(int(id_data)+1, websocket)
             del_id = data.get('del_id')
 
             async with httpx.AsyncClient() as client:
