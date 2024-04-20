@@ -1,4 +1,5 @@
 import asyncio
+import json
 import threading
 import time
 
@@ -46,7 +47,7 @@ def get_package_location(delivery_id):
             current_latitude = str(float(delivery[1]) + 0.01)
             current_longitude = delivery[0]
 
-        elif float(delivery2[0]) <= float(delivery[1]) + 0.0001 and float(delivery2[1]) <= float(delivery[0]) + 0.0001:
+        elif float(delivery2[0]) <= float(delivery[1]) + 0.00001 and float(delivery2[1]) <= float(delivery[0]) + 0.00001:
             cursor5 = conn.cursor()
             cursor5.execute(f"UPDATE deliveries SET status = 'Delivered' WHERE id = {delivery_id};")
             conn.commit()
@@ -54,7 +55,7 @@ def get_package_location(delivery_id):
             return None
         else:
             print(delivery2[0])
-            current_latitude = str(float(delivery2[0]) - 0.001)
+            current_latitude = str(float(delivery2[0]) - 0.0002)
             current_longitude = delivery2[1]
         cursor3 = conn.cursor()
         print(current_latitude)
@@ -72,8 +73,8 @@ def get_package_location(delivery_id):
         location = [{
             'id': delivery[0],
             'from': delivery[2],
-            'sent_time': delivery[3],
-            'delivery_time': delivery[4],
+            'sent_time': delivery[3].strftime("%Y-%m-%d %H:%M:%S"),
+            'delivery_time': delivery[4].strftime("%Y-%m-%d %H:%M:%S"),
             'delivery_type': delivery[5],
             'status': delivery[6],
             'note': delivery[7],
@@ -107,7 +108,7 @@ class LocationSimulator(threading.Thread):
         try:
             if websocket is None:
                 return
-            await websocket.send_text(str(location))
+            await websocket.send_text(str(json.dumps(location)))
             print(f"Location sent: {str(location)}")
         except Exception as e:
             print(f"Error sending location: {e}")
@@ -158,7 +159,7 @@ async def update_delivery(delivery_id: int):
             else:
                 simulator.stop()
                 await WebSocketManager().send_message(
-                    1,
+                    int(delivery[1])+1,
                     str({'type': 'delivery_status_update', 'delivery_id': delivery_id, 'status': next_status})
                 )
                 print(f"Delivery with ID {delivery_id} is already delivered")
