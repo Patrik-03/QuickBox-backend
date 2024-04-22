@@ -31,7 +31,7 @@ def get_package_location(delivery_id):
     try:
         cursor.execute(f"""SELECT accounts.longitude, accounts.latitude, deliveries.id
         FROM accounts 
-        JOIN deliveries ON accounts.id = deliveries.from_id
+        JOIN deliveries ON accounts.id = deliveries.user_id
         WHERE deliveries.id = {delivery_id};""")
         delivery = cursor.fetchone()
         conn.commit()
